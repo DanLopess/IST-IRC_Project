@@ -1,3 +1,7 @@
+#NOTES::::
+- agora o cliente do gamemaster efetua o comando ataque, mas quando juntos, esse comando vem do cliente player
+- e o servidor calcula e envia os resultados para os dois jogadores
+
     while True:
     (client_msg, client_addr) = server_sock.recvfrom(MSG_SIZE)
     msg_request = client_msg.decode().split()

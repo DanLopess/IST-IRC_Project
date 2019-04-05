@@ -2,34 +2,47 @@ import socket
 import sys
 import select
 
-
 import socket
 
-TCP_IP = 'localhost'
-TCP_PORT = 9001
-BUFFER_SIZE = 1024
+#constants definition
+IN = "LOGIN"
+OUT = "LOGOUT"
 
+TCP_IP = 'localhost'
+TCP_PORT = 12345
+BUFFER_SIZE = 4096
+
+# create an ipv4 (AF_INET) socket object using the tcp protocol (SOCK_STREAM)
 client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# connect the client
+# client.connect((target, port))
 client_sock.connect((TCP_IP, TCP_PORT))
 
-# -----------------------
+#Tries to login
+client_msg = IN.encode()
+client_sock.send(client_msg)
 
-# o select quer ficar a espera de ler o socket e ler do stdin (consola)
+# select either for socket or stdin inputs
 inputs = [client_sock, sys.stdin]
-
 
 while True:
   print('Input message to server: ')
   ins, outs, exs = select.select(inputs,[],[])
-  #select devolve para a lista ins quem esta a espera de ler
+  #select assigns to list ins who is waiting to be read
   for i in ins:
-    # i == sys.stdin - alguem escreveu na consola, vamos ler e enviar
+    # i == sys.stdin - someone wrote on the commandline, let's read and send it to server
     if i == sys.stdin:
         user_msg = sys.stdin.readline()
-        client_msg = user_msg.encode()
-        client_sock.sendto(client_msg,(SERVER_IP,SERVER_PORT))
-    # i == sock - o servidor enviou uma mensagem para o socket
+        client_msg = user_msg[:-1].encode() #user_msg[:-1] removes '\n' at string's end
+        client_sock.send(client_msg)
+
+        # end of connection
+        if(user_msg == OUT):
+          break
+
+    # i == sock - server sent a message to the socket
     elif i == client_sock:
-        (server_msg,addr) = client_sock.recvfrom(MSG_SIZE)
+        (server_msg, addr) = client_sock.recvfrom(BUFFER_SIZE)
         server_request = server_msg.decode()
         print("Message received from server:", server_request)
