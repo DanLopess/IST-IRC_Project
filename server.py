@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import socket
 import threading
 import random
@@ -16,6 +17,9 @@ from server_module import *
 #
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
 # **************************************************************************************
+
+# NOTE: TO SELF
+# TODO: player attack (nothing done)
 
 # ******************** generic functions ********************
 def signal_handler(sig, frame):
@@ -77,7 +81,6 @@ def find_data (filename, data):
             for line in f:
                 found_data = line.find(str(data))
                 if (found_data != -1):
-                    print("ENTERED HERE")
                     return line
         return ""
     finally:
@@ -85,6 +88,8 @@ def find_data (filename, data):
 
 def replace_data (filename, oldline, newline):
     rw.acquire_write()  # only one thread a time can write to file
+    print(oldline)
+    print(newline)
     try:
         if (oldline != ""):
             with fileinput.FileInput(filename, inplace=True, backup='.bak') as file:   
@@ -92,7 +97,7 @@ def replace_data (filename, oldline, newline):
                     print(line.replace(oldline, newline), end='')
                     # replaces data in a given file
         else:
-            if not os.path.exists(PLY):
+            if not os.path.exists(PLAY):
                 with open(filename, "w") as f:
                     f.write(newline)  # adds new data
             else:
@@ -117,27 +122,42 @@ def execute_command(message):
         # receives command and player name
         elif (message[COMMAND] == SHOW_LOC and len(message) == 2):
             # message[PLAYER_NAME] : player_name
-            msg_to_client = show_location(message[PLAYERS])
+            if (find_data(PLAY, message[PLAYERS]) != ""):  # if player exists
+                msg_to_client = show_location(message[PLAYERS])
+            else:
+                msg_to_client = NOK + INV_PLAYER
 
         elif (message[COMMAND] == ATT and len(message) == 3):
             # message[PLAYERS] : attacker_name / message[PLAYERS+1] : attacked_name
-            msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
+            if (find_data(PLAY, message[PLAYERS]) != ""):
+                msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
+            else:
+                msg_to_client = NOK + INV_PLAYER
 
         elif (message[COMMAND] == EAT and len(message) == 2):  # receives command and player name
-            msg_to_client = player_eat(message[PLAYERS])
+            if (find_data(PLAY, message[PLAYERS]) != ""):
+                msg_to_client = player_eat(message[PLAYERS])
+            else:
+                msg_to_client = NOK + INV_PLAYER
 
         # receives command and player name
-        elif (message[COMMAND] == PRACT and len(message) == 2):
-            msg_to_client = player_practice(message[PLAYERS])
+        elif (message[COMMAND] == PRACT and len(message) == 3):
+            if (find_data(PLAY, message[PLAYERS]) != ""):
+                msg_to_client = player_practice(message[PLAYERS], message[PLAYERS+1])
+            else:
+                msg_to_client = NOK + INV_PLAYER
 
         # receives command and player name
         elif (message[COMMAND] == TRP and len(message) == 2):
-            msg_to_client = player_trap(message[PLAYERS])
+            if (find_data(PLAY, message[PLAYERS]) != ""):
+                msg_to_client = player_trap(message[PLAYERS])
+            else:
+                msg_to_client = NOK + INV_PLAYER
            
         elif (message[COMMAND] == ADD_PLAYER and len(message) == 4):
             msg_to_client = add_player(message[PLAYERS], message[PLAYERS+1], message[PLAYERS+2])
+        
         else:
-            print (message[COMMAND])
             msg_to_client = NOK + INV_MSG
     else:
         msg_to_client = NOK + INV_MSG
@@ -182,43 +202,36 @@ def place_item(item_type):
         # will not enter here
         return ""
 
-
 def show_location(player_name): #receives player name, finds player name, returns everything on player location.
-    "\n".join([x for x in find_data(MAP, player_name).split(";")])
-    return OK + LOCATION_OK + "\n".join([x for x in find_data(MAP, player_name).split(";")])
-
+    return ("\n" + OK + LOCATION_OK + "\n" + "\n".join([x for x in find_data(MAP, player_name).split(";")][1:]))
 
 def attack_player(attacker, attacked):  # receives attacking player and attacked player
     return "attack ok"
 
-
-# receives player , sees player position and tries to eat if location not empty
 def player_eat(player_name):
-    player_line = find_data(PLAYERS, player_name)
-    print(player_line)
-    # splits "COORDINATES: (x,y)" and (x,y) is at index 1
-    coordinates = ((player_line.split(";"))[COORDINATES].split(":"))[VALUE_INDEX]
-    print("ENTERED HERE")
+    # receives player , sees player position and tries to eat if location not empty
+    player_line = find_data(PLAY, player_name)
     
+    # splits "COORDINATES: (x,y)" and (x,y) is at index 1
+    coordinates = eval(((player_line.split(";"))[COORDINATES].split(":"))[VALUE_INDEX])
+
     location_line = find_data(MAP, coordinates)
-    print(location_line)
+    
     line = location_line.split(";")
-    print(line)
     food = eval((line[FOOD].split(":"))[VALUE_INDEX])
-    print(food)
     # splits "FOOD: x" , and x is at index 1
 
     if (food > 0):
-        food -= 1
-        replace_data(MAP, location_line,
-                        location_line.replace(line[FOOD], (" FOOD: " + str(food))))
         if ("ENRGY: 10" not in player_line):
+            food -= 1
+            replace_data(MAP, location_line,
+                            location_line.replace(line[FOOD], (" FOOD: " + str(food))))
             line = player_line.split(";")
             # obtains food quantity
             energy = eval((line[ENRGY].split(":"))[VALUE_INDEX])
             energy += 1
-            replace_data(PLAYERS, player_line,
-                        player_line.replace(line[ENRGY], (" ENRGY: " + str(energy))))
+
+            replace_data(PLAY, player_line, player_line.replace(line[ENRGY], (" ENRGY: " + str(energy))))
         
             return OK + player_name + EAT_OK
 
@@ -226,16 +239,67 @@ def player_eat(player_name):
 
     return NOK + player_name + EAT_NOK + " [location has no food available]"
 
+def player_practice(player_name, option):
+    # receives player tries to train (option: 1 - attack, 2 - defense) if location has center
+    location_line = find_data(MAP, player_name)
+    if (location_line.find("CENTER: True;") != -1):
+        player_line = find_data(PLAY, player_name)
+        line = player_line.split(";")
+        energy = eval((line[ENRGY].split(":"))[VALUE_INDEX])
+        if (energy > 0):
+            energy -= 1
+            if (option == "1"):
+                replace_data(PLAY, player_line, player_line.replace(
+                    line[ENRGY], (" ENRGY: " + str(energy)))) # looses 1 energy point
+                player_line = find_data(PLAY, player_name) # gets new replaced line
+                line = player_line.split(";")
+                # obtains attack quantity and increases
+                attack = eval((line[ATTACK].split(":"))[VALUE_INDEX])
+                attack += 1
+                replace_data(PLAY, player_line, player_line.replace(
+                    line[ATTACK], (" ATT: " + str(attack))))
+                return OK + player_name + PRACT_OK
+            elif (option == "2"):
+                replace_data(PLAY, player_line, player_line.replace(
+                    line[ENRGY], (" ENRGY: " + str(energy))))  # looses 1 energy point
+                player_line = find_data(PLAY, player_name)
+                line = player_line.split(";")
+                # obtains defense quantity and increases
+                defense = eval((line[DEF].split(":"))[VALUE_INDEX])
+                defense += 1
+                replace_data(PLAY, player_line, player_line.replace(
+                    line[DEF], (" DEF: " + str(defense))))
+                return OK + player_name + PRACT_OK
+            else:
+                return NOK + INV_MSG
+        else:
+            NOK + player_name + PRACT_NOK + " [player has no energy left]"
+    else:
+        return NOK + player_name + PRACT_NOK + " [location has no training center]"
 
-# receives player , sees player position and tries to train if location not empty
-def player_practice(player_name):
-    location_line = find_data(PLAYERS, player_name)
-    return ""
-
-
-# receives player , sees player position and tries to trap him if location not empty
 def player_trap(player_name):
-    return "trap ok"
+    # receives player , sees player position and tries to trap him if location not empty
+    location_line = find_data(MAP, player_name)
+    if (location_line.find("TRAP: True;") != -1):
+        player_line = find_data(PLAY, player_name)
+        line = player_line.split(";")
+        energy = eval((line[ENRGY].split(":"))[VALUE_INDEX])
+        if (energy > 0):
+            energy -= 1
+            replace_data(PLAY, player_line, player_line.replace(
+                line[ENRGY], (" ENRGY: " + str(energy))))  # looses 1 energy point
+            player_line = find_data(PLAY, player_name) # gets new replaced line
+            line = player_line.split(";")
+            # obtains experience quantity and increases
+            experience = eval((line[EXP].split(":"))[VALUE_INDEX])
+            experience += 1
+            replace_data(PLAY, player_line, player_line.replace(
+                line[EXP], (" EXP: " + str(experience))))
+            return OK + player_name + TRAP_OK
+        else:
+            return OK + player_name + TRAP_OK + " [player is dead]" # player server should remove player
+    else:
+        return NOK + player_name + TRAP_NOK + " [location has no trap]"
 
 def add_player(player_name, att, defense):
     if (player_name != "" and (eval(att) +  eval(defense)) <= 50):
@@ -244,7 +308,7 @@ def add_player(player_name, att, defense):
         coordinate = "(" + str(x)+", "+str(y)+")"
         
 
-        replace_data(PLY, "", player_name + " ; ATT: " + att + " ; DEF: " +
+        replace_data(PLAY, "", player_name + " ; ATT: " + att + " ; DEF: " +
                      defense + "; EXP: 1; ENRGY: 10; COORDINATES: " + 
                      coordinate + "; WON: 0; LOST: 0\n") # adds new player line to players.save
         

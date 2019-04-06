@@ -2,8 +2,8 @@
 # improve protocol with no such player 
 # when show location, if has trap, food, or training center, say that player can eat, can train, can attack
 
-# fazer lock ou mutex quando estou a escrveer no ficheiro
-# adicionar funcao add player e move player
+
+# adicionar funcao move player
 
 
 #NOTES::::
