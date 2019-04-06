@@ -1,0 +1,17 @@
+## QUESTIONS:
+# improve protocol with no such player 
+# when show location, if has trap, food, or training center, say that player can eat, can train, can attack
+
+# fazer lock ou mutex quando estou a escrveer no ficheiro
+# adicionar funcao add player e move player
+
+
+#NOTES::::
+- agora o cliente do gamemaster efetua o comando ataque, mas quando juntos, esse comando vem do cliente player
+- e o servidor calcula e envia os resultados para os dois jogadores
+
+
+
+Manel - Ataque: 25 ; Defesa: 25; Experiencia: 25; Energia: 25; Coordinates: (x,y)\n # adicionar combates perdidos e combates ganhos
+
+

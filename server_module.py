@@ -1,4 +1,4 @@
-
+import threading
 # **************************************************************************************
 #
 #                            IRC PROJECT - SERVER_MODULE (import)
@@ -59,10 +59,11 @@ SHOW_LOC = 'SHOW_LOCATION'
 ATT = 'ATTACK'
 EAT = 'EAT'
 PRACT = 'PRACTICE'
-KILL = 'LOGOUT'  # for testing purposes
+LOGOUT = 'LOGOUT'  
+KILL = 'KILL_SERVER'  # for testing purposes
 
 messages = [LOG, PLACE_FOOD, PLACE_TRAP,
-            PLACE_CENTER, SHOW_LOC, ATT, EAT, PRACT, TRP]
+            PLACE_CENTER, SHOW_LOC, ATT, EAT, PRACT, TRP, ADD_PLAYER, MOVE_PLAYER]
 
 #return codes
 OK = 'OK: '
@@ -76,10 +77,9 @@ ATT_OK = ' attacked successfully'  # specifies life and attributes of each playe
 EAT_OK = ' ate successfully'
 PRACT_OK = ' practiced successfully'
 TRAP_OK = ' fell into trap'
-ADD_OK = ' added successfully'
+ADD_OK = ' player added successfully'
+MOV_OK = ' player moved successfully'
 # if fell into trap, then player_name + TRAP_OK is also sent
-MOV_OK = ' moved successfully'
-LOG_OUT = ' logging out...'
 
 LOG_NOK = ' failed to login'
 LOCATION_NOK = ' location empty'
@@ -92,3 +92,43 @@ INV_MSG = ' invalid message type'
 INV_PLAYER = ' no such player'
 ADD_NOK = ' failed to add player'
 MOV_NOK = ' failed to move player'
+
+
+class ReadWriteLock:
+    """ A lock object that allows many simultaneous "read locks", but
+    only one "write lock." """
+
+    def __init__(self):
+        self._read_ready = threading.Condition(threading.Lock())
+        self._readers = 0
+
+    def acquire_read(self):
+        """ Acquire a read lock. Blocks only if a thread has
+        acquired the write lock. """
+        self._read_ready.acquire()
+        try:
+            self._readers += 1
+        finally:
+            self._read_ready.release()
+
+    def release_read(self):
+        """ Release a read lock. """
+        self._read_ready.acquire()
+        try:
+            self._readers -= 1
+            if not self._readers:
+                self._read_ready.notifyAll()
+        finally:
+            self._read_ready.release()
+
+    def acquire_write(self):
+        """ Acquire a write lock. Blocks until there are no
+        acquired read or write locks. """
+        self._read_ready.acquire()
+        while self._readers > 0:
+            self._read_ready.wait()
+
+    def release_write(self):
+        """ Release a write lock. """
+        self._read_ready.release()
+

@@ -1,6 +1,6 @@
 #NOTES::::
-- agora o cliente do gamemaster efetua o comando ataque, mas quando juntos, esse comando vem do cliente player
-- e o servidor calcula e envia os resultados para os dois jogadores
+#- agora o cliente do gamemaster efetua o comando ataque, mas quando juntos, esse comando vem do cliente player
+#- e o servidor calcula e envia os resultados para os dois jogadores
 
 
 def find_coordinates(player_name):  # maybe implement in needed function?
@@ -18,4 +18,4 @@ def find_coordinates(player_name):  # maybe implement in needed function?
         return (False, False)
 
 
-esta funcao e para encontrar a coordenada dum jogador, mas se apenas for preciso no show_location, n e necessaria uma funcao
+#esta funcao e para encontrar a coordenada dum jogador, mas se apenas for preciso no show_location, n e necessaria uma funcao

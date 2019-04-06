@@ -14,6 +14,7 @@ import select
 #constants definition
 IN = "LOGIN\n"
 OUT = "LOGOUT\n"
+KILL = "KILL_SERVER\n"
 
 TCP_IP = 'localhost'
 TCP_PORT = 12345
@@ -34,22 +35,23 @@ client_sock.send(client_msg)
 inputs = [client_sock, sys.stdin]
 
 while True:
-  print('Input message to server: ')
-  ins, outs, exs = select.select(inputs,[],[])
-  #select assigns to list ins who is waiting to be read
-  for i in ins:
-    # i == sys.stdin - someone wrote on the commandline, let's read and send it to server
-    if i == sys.stdin:
-        user_msg = sys.stdin.readline()
-        client_msg = user_msg[:-1].encode() #user_msg[:-1] removes '\n' at string's end
-        client_sock.send(client_msg)
+	print('Input message to server: ')
+	ins, outs, exs = select.select(inputs,[],[])
+	#select assigns to list ins who is waiting to be read
+	for i in ins:
+		# i == sys.stdin - someone wrote on the commandline, let's read and send it to server
+		if i == sys.stdin:
+				user_msg = sys.stdin.readline()
+				user_msg.replace(" ", "") #removes all whitespaces (no command should have whitespaces)
+				client_msg = user_msg[:-1].encode() #user_msg[:-1] removes '\n' at string's end
+				client_sock.send(client_msg)
 
-        # end of connection
-        if(user_msg == OUT):
-          break
+				# end of connection
+				if(user_msg == OUT or user_msg == KILL):
+					exit()
 
-    # i == sock - server sent a message to the socket
-    elif i == client_sock:
-        (server_msg, addr) = client_sock.recvfrom(BUFFER_SIZE)
-        server_request = server_msg.decode()
-        print("Message received from server:", server_request)
+		# i == sock - server sent a message to the socket
+		elif i == client_sock:
+				(server_msg, addr) = client_sock.recvfrom(BUFFER_SIZE)
+				server_request = server_msg.decode()
+				print("Message received from server:", server_request)

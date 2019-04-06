@@ -1,7 +1,10 @@
+import sys
+import os
 import socket
 import threading
 import random
 import fileinput
+import signal
 from server_module import *
 
 # **************************************************************************************
@@ -14,14 +17,16 @@ from server_module import *
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
 # **************************************************************************************
 
-#sockets initiation
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# the SO_REUSEADDR flag reuses a local socket in TIME_WAIT state, without waiting for its natural timeout to expire.
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-server.bind((bind_ip, bind_port))
-server.listen(5)  # max backlog of connections
-
 # ******************** generic functions ********************
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C. Leaving...') 
+    sys.exit(0) #if multiple threads, must receive command twice
+
+def end_connections(active_users):
+    # terminates all server-client sockets
+    for i in active_users:
+        i.close()
+        active_users.remove(i)
 
 def handle_client_connection(client_socket, address): # place in while
     logged = 0 # variable to check if client has already logged in
@@ -34,45 +39,71 @@ def handle_client_connection(client_socket, address): # place in while
         # Splits input message by its separation punctuation (:)
         message = request.split(":")
         
-        if (len(message) == 1 and message[COMMAND] == LOG):
+        if (len(message) == 1 and message[COMMAND] == LOG): #LOGIN
             if (logged == 0):
                 logged = 1
                 msg_to_client = OK + LOG_OK
             elif (logged == 1):
                 msg_to_client = NOK + LOG_NOK
+        elif (len(message) == 1 and message[COMMAND] == LOGOUT):  # LOGOUT
+            break
+        elif (len(message) == 1 and message[COMMAND] == KILL):  # KILL_SERVER
+            end_connections(active_users)
+            exit(0)  # end thread
         else:
             msg_to_client = execute_command(message)
            
-        if (msg_to_client == KILL):
-            client_socket.send(msg_to_client.encode())
-            break
-
         client_socket.send(msg_to_client.encode())
 
     # end of connection
     client_socket.close()
     active_users.remove(client_socket)
+    threads.remove(threading.current_thread())
+
+def generate_save():
+    # creates game map
+    if not os.path.exists(MAP):
+        with open(MAP, "w") as fn:
+            for i in range(0,5):
+                for f in range(0,5):
+                    fn.write(str((i,f))+" ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n")
 
 def find_data (filename, data):
     #data can be either player_name or coordinates, filename is either map or players
     #this function returns the correspondent lines of either a specific coordinate or player
-    with open(filename, "r") as f:
-        for line in f:
-            found_data = line.find(str(data))
-            if (found_data != -1):
-                 return line
-    return ""
+    rw.acquire_read() # many threads can read, if none is writting
+    try:
+        with open(filename, "r") as f:
+            for line in f:
+                found_data = line.find(str(data))
+                if (found_data != -1):
+                    print("ENTERED HERE")
+                    return line
+        return ""
+    finally:
+        rw.release_read()
 
 def replace_data (filename, oldline, newline):
-    # replaces data in a given file
-    with fileinput.FileInput(filename, inplace=True, backup='.bak') as file: 
-        for line in file:
-            print(line.replace(oldline, newline), end='')
+    rw.acquire_write()  # only one thread a time can write to file
+    try:
+        if (oldline != ""):
+            with fileinput.FileInput(filename, inplace=True, backup='.bak') as file:   
+                for line in file:
+                    print(line.replace(oldline, newline), end='')
+                    # replaces data in a given file
+        else:
+            if not os.path.exists(PLY):
+                with open(filename, "w") as f:
+                    f.write(newline)  # adds new data
+            else:
+                with open(filename, "a+") as f:
+                    f.write(newline)  # adds new data
+    finally:
+        rw.release_write()
 
 def execute_command(message):
     #function that executes all actions based on command input
     if (message[COMMAND] in messages):  # if invalid command, no need to continue
-        
         if (message[COMMAND] == PLACE_FOOD and len(message) == 1):
             msg_to_client = place_item(FOO)  # type 1 is food
 
@@ -92,18 +123,19 @@ def execute_command(message):
             # message[PLAYERS] : attacker_name / message[PLAYERS+1] : attacked_name
             msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
 
-        elif (message[COMMAND] == EAT):  # receives command and player name
+        elif (message[COMMAND] == EAT and len(message) == 2):  # receives command and player name
             msg_to_client = player_eat(message[PLAYERS])
 
-        elif (message[COMMAND] == PRACT):  # receives command and player name
+        # receives command and player name
+        elif (message[COMMAND] == PRACT and len(message) == 2):
             msg_to_client = player_practice(message[PLAYERS])
 
-        elif (message[COMMAND] == TRP):  # receives command and player name
+        # receives command and player name
+        elif (message[COMMAND] == TRP and len(message) == 2):
             msg_to_client = player_trap(message[PLAYERS])
-
-        elif (message[COMMAND] == KILL):
-            msg_to_client = OK + LOG_OUT
-
+           
+        elif (message[COMMAND] == ADD_PLAYER and len(message) == 4):
+            msg_to_client = add_player(message[PLAYERS], message[PLAYERS+1], message[PLAYERS+2])
         else:
             print (message[COMMAND])
             msg_to_client = NOK + INV_MSG
@@ -118,9 +150,9 @@ def place_item(item_type):
     # generate random coordinates
     x = random.randint(0, 4)
     y = random.randint(0, 4)
-    coordinate = "(" + str(x)+","+str(y)+")"
+    coordinate = "(" + str(x)+", "+str(y)+")"
     location_line = find_data(MAP, coordinate)
-   
+
     if (item_type == FOO):
         if ("FOOD:" in location_line):
             line = location_line.split(";") 
@@ -163,14 +195,17 @@ def attack_player(attacker, attacked):  # receives attacking player and attacked
 # receives player , sees player position and tries to eat if location not empty
 def player_eat(player_name):
     player_line = find_data(PLAYERS, player_name)
-
+    print(player_line)
     # splits "COORDINATES: (x,y)" and (x,y) is at index 1
     coordinates = ((player_line.split(";"))[COORDINATES].split(":"))[VALUE_INDEX]
+    print("ENTERED HERE")
     
     location_line = find_data(MAP, coordinates)
-
+    print(location_line)
     line = location_line.split(";")
+    print(line)
     food = eval((line[FOOD].split(":"))[VALUE_INDEX])
+    print(food)
     # splits "FOOD: x" , and x is at index 1
 
     if (food > 0):
@@ -202,15 +237,42 @@ def player_practice(player_name):
 def player_trap(player_name):
     return "trap ok"
 
-def add_player(player_name):
-    pass
+def add_player(player_name, att, defense):
+    if (player_name != "" and (eval(att) +  eval(defense)) <= 50):
+        x = random.randint(0, 4)
+        y = random.randint(0, 4)
+        coordinate = "(" + str(x)+", "+str(y)+")"
+        
 
-def mov_player(player_name):
-    pass
+        replace_data(PLY, "", player_name + " ; ATT: " + att + " ; DEF: " +
+                     defense + "; EXP: 1; ENRGY: 10; COORDINATES: " + 
+                     coordinate + "; WON: 0; LOST: 0\n") # adds new player line to players.save
+        
+        location_line = find_data(MAP, coordinate)
+        if ("PLAYERS: NULL;" in location_line):
+            new_line = location_line.replace("PLAYERS: NULL;", "PLAYERS: " + player_name + ";")
+        else:
+            new_line = location_line.replace("PLAYERS: ", "PLAYERS: " + player_name + ", ")
+        
+        replace_data(MAP, location_line, new_line) # adds player_name to map.save
+        return OK + ADD_OK
+    else:
+        return NOK + ADD_NOK
 
 #******************* main code **********************
 
+#sockets initiation
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# the SO_REUSEADDR flag reuses a local socket in TIME_WAIT state, without waiting for its natural timeout to expire.
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((bind_ip, bind_port))
+server.listen(5)  # max backlog of connections
+
 active_users = []
+threads = []
+signal.signal(signal.SIGINT, signal_handler) # receive and handle sigint (ctrl+c)
+rw = ReadWriteLock()  # lock for one writer and many readers of a file
+generate_save() # creates required files
 
 while True:
     client_sock, address = server.accept()
@@ -222,3 +284,4 @@ while True:
         args=(client_sock, address, )
     )
     client_handler.start()
+    threads.append(client_handler)
