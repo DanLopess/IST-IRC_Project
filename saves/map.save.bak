@@ -1,7 +1,7 @@
 (0,0) ; PLAYERS: Manel; FOOD: 0; TRAP: False; CENTER: False;\n
 (1,0) ; PLAYERS: NULL; FOOD: 1; TRAP: False; CENTER: False;\n
 (2,0) ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: True;\n
-(3,0) ; PLAYERS: NULL; FOOD: 1; TRAP: True; CENTER: False;\n
+(3,0) ; PLAYERS: NULL; FOOD: 0; TRAP: True; CENTER: False;\n
 (4,0) ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n
 (0,1) ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n
 (1,1) ; PLAYERS: NULL; FOOD: 2; TRAP: False; CENTER: False;\n
