@@ -2,75 +2,17 @@ import socket
 import threading
 import random
 import fileinput
+from server_module import *
 
-# ***************** NOTES ******************
-#   map lines structure: "(0,0) ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n"
-#   players lines structure: "Player_name ; Ataque: 25 ; Defesa: 25; Experiencia: 25; Energia: 25; Coordinates: (x,y)\n"
-#   
-# ******************************************
-
-#constants definition
-NULL = ''
-COMMAND = 0
-FOOD = 1
-TRAP = 2
-CENTER = 3
-IP = 0 # for identifying the ip address in address vector 
-PORT = 1  # for identifying the port in address vector
-PLAYERS = "saves/players.save"
-MAP = "saves/map.save"
-TRP = 'TRAP'
-FOO = 'FOOD'
-CTR = 'CENTER'
-
-#position in saves
-
-#socket communication parameters
-bind_ip = '127.0.0.1'
-bind_port = 12345
-MSG_SIZE = 1024
-
-#possible messages
-LOG = 'LOGIN'
-PLACE_FOOD = 'PLACEF'
-PLACE_TRAP = 'PLACET'
-PLACE_CENTER = 'PLACEC'
-ADD_PLAYER = 'ADDP' # add new player to map
-MOVE_PLAYER = 'MOVP' # receives this command from player, and checks whether moving is possible 
-SHOW_LOC = 'SHOW_LOCATION'
-ATT = 'ATTACK'
-EAT = 'EAT'
-PRACT = 'PRACTICE'
-KILL = 'LOGOUT' #for testing purposes
-
-messages = [LOG, PLACE_FOOD, PLACE_TRAP, PLACE_CENTER, SHOW_LOC, ATT, EAT, PRACT, TRP]
-
-#return codes
-OK          = 'OK: '
-NOK      = 'NOK: '
-
-#return sub-codes
-LOG_OK      = 'login successful'
-PLACE_OK = ' placed successfully'
-LOCATION_OK = 'location has' #specifies what location has
-ATT_OK = 'attacked successfully' # specifies life and attributes of each player
-EAT_OK = 'ate successfully'
-PRACT_OK = 'practiced successfully'
-TRAP_OK = 'fell into trap'
-ADD_OK = 'added successfully'
-MOV_OK = 'moved successfully' # if fell into trap, then player_name + TRAP_OK is also sent
-
-LOG_NOK  = 'failed to login'
-LOCATION_NOK = 'location empty'
-PLACE_NOK = 'could not be placed'
-ATT_NOK = 'attack failed'
-EAT_NOK = 'could not eat'
-PRACT_NOK = 'could not practice'
-TRAP_NOK = 'could not be trapped'
-INV_MSG     = 'invalid message type'
-INV_PLAYER = 'no such player'
-ADD_NOK = 'failed to add player'
-MOV_NOK = 'failed to move player'
+# **************************************************************************************
+#
+#                             IRC PROJECT - SERVER
+#                             AUTHOR - DANIEL LOPES
+#
+#           NOTE: ALL DEFINITIONS AND MESSAGES TYPES ARE IN SERVER_MODULE (import)
+#
+# Project source files: server.py, client.py, server_modules.py, map.save, players.save
+# **************************************************************************************
 
 #sockets initiation
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -89,19 +31,20 @@ def handle_client_connection(client_socket, address): # place in while
         
         print('Received {} from {} , {}'.format(request, address[IP], address[PORT]))
        
-        message = parse_message(request)
+        # Splits input message by its separation punctuation (:)
+        message = request.split(":")
         
         if (len(message) == 1 and message[COMMAND] == LOG):
             if (logged == 0):
                 logged = 1
                 msg_to_client = OK + LOG_OK
-                
-            if (logged == 1):
+            elif (logged == 1):
                 msg_to_client = NOK + LOG_NOK
         else:
             msg_to_client = execute_command(message)
            
         if (msg_to_client == KILL):
+            client_socket.send(msg_to_client.encode())
             break
 
         client_socket.send(msg_to_client.encode())
@@ -109,9 +52,6 @@ def handle_client_connection(client_socket, address): # place in while
     # end of connection
     client_socket.close()
     active_users.remove(client_socket)
-
-def parse_message(input_message):
-    return input_message.split(":") # Splits input message by its separation punctuation (:)
 
 def find_data (filename, data):
     #data can be either player_name or coordinates, filename is either map or players
@@ -134,34 +74,38 @@ def execute_command(message):
     if (message[COMMAND] in messages):  # if invalid command, no need to continue
         
         if (message[COMMAND] == PLACE_FOOD and len(message) == 1):
-            msg_to_client = place_item(FOOD)  # type 1 is food
+            msg_to_client = place_item(FOO)  # type 1 is food
 
         elif (message[COMMAND] == PLACE_TRAP and len(message) == 1):
-            msg_to_client = place_item(TRAP)  # type 1 is trap
+            msg_to_client = place_item(TRP)  # type 1 is trap
 
         elif (message[COMMAND] == PLACE_CENTER and len(message) == 1):
             # type 1 is training center
-            msg_to_client = place_item(CENTER)
+            msg_to_client = place_item(CTR)
 
         # receives command and player name
         elif (message[COMMAND] == SHOW_LOC and len(message) == 2):
-            # message[1] : player_name
-            msg_to_client = show_location(message[1])
+            # message[PLAYER_NAME] : player_name
+            msg_to_client = show_location(message[PLAYERS])
 
         elif (message[COMMAND] == ATT and len(message) == 3):
-            # message[1] : attacker_name / message[2] : attacked_name
-            msg_to_client = attack_player(message[1], message[2])
+            # message[PLAYERS] : attacker_name / message[PLAYERS+1] : attacked_name
+            msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
 
         elif (message[COMMAND] == EAT):  # receives command and player name
-            msg_to_client = player_eat(message[1])
+            msg_to_client = player_eat(message[PLAYERS])
 
         elif (message[COMMAND] == PRACT):  # receives command and player name
-            msg_to_client = player_practice(message[1])
+            msg_to_client = player_practice(message[PLAYERS])
 
         elif (message[COMMAND] == TRP):  # receives command and player name
-            msg_to_client = player_trap(message[1])
+            msg_to_client = player_trap(message[PLAYERS])
+
+        elif (message[COMMAND] == KILL):
+            msg_to_client = OK + LOG_OUT
 
         else:
+            print (message[COMMAND])
             msg_to_client = NOK + INV_MSG
     else:
         msg_to_client = NOK + INV_MSG
@@ -177,30 +121,31 @@ def place_item(item_type):
     coordinate = "(" + str(x)+","+str(y)+")"
     location_line = find_data(MAP, coordinate)
    
-    if (item_type == FOOD):
+    if (item_type == FOO):
         if ("FOOD:" in location_line):
-            line = location_line.split(";")
-            food = eval((line[2].split(":"))[1]) #obtains food quantity
-            food += 1
+            line = location_line.split(";") 
+            # obtains food quantity (splits "FOOD: x" , and x is in index 1)
+            food = eval((line[FOOD].split(":"))[VALUE_INDEX])
+            food += 1 # increases food quantity by 1
             replace_data(MAP, location_line,
-                         location_line.replace(line[2], (" FOOD: " + str(food))))
+                         location_line.replace(line[FOOD], (" FOOD: " + str(food))))
 
             return OK + FOO + PLACE_OK
-        return NOK + FOO + " " + PLACE_NOK
+        return NOK + FOO + PLACE_NOK
 
-    elif (item_type == TRAP):
+    elif (item_type == TRP):
         if ("TRAP: False" in location_line):
             replace_data(MAP, location_line, location_line.replace(
                 "TRAP: False", "TRAP: True"))
             return OK + TRP + PLACE_OK
-        return NOK + TRP + " " + PLACE_NOK + " [location already has trap]"
+        return NOK + TRP + PLACE_NOK + " [location already has trap]"
 
-    elif (item_type == CENTER):
+    elif (item_type == CTR):
         if ("CENTER: False" in location_line):
             replace_data(MAP, location_line, location_line.replace(
                 "CENTER: False", "CENTER: True"))
             return OK + CTR + PLACE_OK
-        return NOK + CTR + " " + PLACE_NOK + " [location already has training center]"
+        return NOK + CTR + PLACE_NOK + " [location already has training center]"
     else:
         # will not enter here
         return ""
@@ -218,34 +163,36 @@ def attack_player(attacker, attacked):  # receives attacking player and attacked
 # receives player , sees player position and tries to eat if location not empty
 def player_eat(player_name):
     player_line = find_data(PLAYERS, player_name)
-    # get coordinates from player's line
-    coordinates = ((player_line.split(";"))[-1].split(":"))[1]
+
+    # splits "COORDINATES: (x,y)" and (x,y) is at index 1
+    coordinates = ((player_line.split(";"))[COORDINATES].split(":"))[VALUE_INDEX]
+    
     location_line = find_data(MAP, coordinates)
 
     line = location_line.split(";")
-    food = eval((line[2].split(":"))[1])  # obtains food quantity
+    food = eval((line[FOOD].split(":"))[VALUE_INDEX])
+    # splits "FOOD: x" , and x is at index 1
 
     if (food > 0):
         food -= 1
         replace_data(MAP, location_line,
-                        location_line.replace(line[2], (" FOOD: " + str(food))))
-        if ("Energy: 10" not in player_line):
+                        location_line.replace(line[FOOD], (" FOOD: " + str(food))))
+        if ("ENRGY: 10" not in player_line):
             line = player_line.split(";")
-            energy = eval((line[4].split(":"))[1])  # obtains food quantity
+            # obtains food quantity
+            energy = eval((line[ENRGY].split(":"))[VALUE_INDEX])
             energy += 1
             replace_data(PLAYERS, player_line,
-                        player_line.replace(line[4], (" Energy: " + str(energy))))
+                        player_line.replace(line[ENRGY], (" ENRGY: " + str(energy))))
         
-            return OK + player_name + " " + EAT_OK
+            return OK + player_name + EAT_OK
 
-        return NOK + player_name + " " + EAT_NOK + " [player's energy full]"
+        return NOK + player_name + EAT_NOK + " [player's energy full]"
 
-    return NOK + player_name + " " + EAT_NOK
+    return NOK + player_name + EAT_NOK + " [location has no food available]"
 
 
 # receives player , sees player position and tries to train if location not empty
-
-
 def player_practice(player_name):
     location_line = find_data(PLAYERS, player_name)
     return ""

@@ -2,11 +2,18 @@ import socket
 import sys
 import select
 
-import socket
+
+# **************************************************************************************
+#
+#                             IRC PROJECT - CLIENT
+#                             AUTHOR - DANIEL LOPES
+#
+# Project source files: server.py, client.py, server_modules.py, map.save, players.save
+# **************************************************************************************
 
 #constants definition
-IN = "LOGIN"
-OUT = "LOGOUT"
+IN = "LOGIN\n"
+OUT = "LOGOUT\n"
 
 TCP_IP = 'localhost'
 TCP_PORT = 12345
@@ -20,7 +27,7 @@ client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_sock.connect((TCP_IP, TCP_PORT))
 
 #Tries to login
-client_msg = IN.encode()
+client_msg = IN[:-1].encode()
 client_sock.send(client_msg)
 
 # select either for socket or stdin inputs

@@ -1,1 +1,1 @@
-Manel ; Ataque: 25 ; Defesa: 25; Experiencia: 25; Energy: 10; Coordinates: (x,y)\n # adicionar combates perdidos e combates ganhos
+Manel ; ATT: 25 ; DEF: 25; EXP: 25; ENRGY: 10; COORDINATES: (x,y); WON: 0; LOST: 0\n
