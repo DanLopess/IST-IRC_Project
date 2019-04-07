@@ -18,9 +18,6 @@ from server_module import *
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
 # **************************************************************************************
 
-# NOTE: TO SELF
-# TODO: player attack (nothing done)
-
 # ******************** generic functions ********************
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C. Leaving...') 
@@ -88,8 +85,6 @@ def find_data (filename, data):
 
 def replace_data (filename, oldline, newline):
     rw.acquire_write()  # only one thread a time can write to file
-    print(oldline)
-    print(newline)
     try:
         if (oldline != ""):
             with fileinput.FileInput(filename, inplace=True, backup='.bak') as file:   
@@ -164,6 +159,17 @@ def execute_command(message):
 
     return msg_to_client
 
+def change_stats_player(player_name, attribute, pos, value):
+    # this function allows to change a stat value of the player
+    player_line = find_data(PLAY, player_name)
+    line = player_line.split(";")
+    stat = eval((line[pos].split(":"))[VALUE_INDEX])
+    stat = eval((line[pos].split(":"))[VALUE_INDEX])
+    stat += value
+
+    replace_data(PLAY, player_line, player_line.replace(
+        line[pos], (" " + attribute + ": " + str(stat))))
+
 #************** commands handling functions **********************
 
 def place_item(item_type):
@@ -206,7 +212,43 @@ def show_location(player_name): #receives player name, finds player name, return
     return ("\n" + OK + LOCATION_OK + "\n" + "\n".join([x for x in find_data(MAP, player_name).split(";")][1:]))
 
 def attack_player(attacker, attacked):  # receives attacking player and attacked player
-    return "attack ok"
+    location_line = find_data(MAP, attacker) # gets location line, in which attacker and attacked are
+    if (attacked in location_line):
+        attacker_line = find_data(PLAY, attacker)
+        attacked_line = find_data(PLAY, attacked)
+        
+        line = attacker_line.split(";")
+        attacker_stats = {
+            "attack" : eval((line[ATTACK].split(":"))[VALUE_INDEX]),
+            "energy" : eval((line[ENRGY].split(":"))[VALUE_INDEX]),
+            "experience" : eval((line[EXP].split(":"))[VALUE_INDEX])
+        }
+
+        line2 = attacked_line.split(";")
+        attacked_stats = {
+            "defense" : eval((line2[ATTACK].split(":"))[VALUE_INDEX]),
+            "energy" : eval((line2[ENRGY].split(":"))[VALUE_INDEX]),
+            "experience" : eval((line2[EXP].split(":"))[VALUE_INDEX])
+        }
+
+        #both attacker and attacked lose one energy
+        change_stats_player(attacker, "ENRGY", ENRGY, -1)
+        change_stats_player(attacked, "ENRGY", ENRGY, -1)
+
+        if ((attacker_stats["attack"] + attacker_stats["energy"] + attacker_stats["experience"]) /
+        ((attacked_stats["defense"] + attacked_stats["energy"] + attacked_stats["experience"]) * random.uniform(0.5, 1.5)) > 1):
+            # attacker gained experience and attacked lost one energy
+            change_stats_player(attacker, "EXP", EXP, 1)
+            change_stats_player(attacked, "ENRGY", ENRGY, -1)
+            return OK + ATT_OK + " [" + attacker + " won the combat and received one experience point]"
+        else:
+            # attacked gained experience and attacker lost one energy (opposite)
+            change_stats_player(attacked, "EXP", EXP, 1)
+            change_stats_player(attacker, "ENRGY", ENRGY, -1)
+            return NOK + ATT_NOK + " [" + attacked + " won the combat instead and received one experience point]"
+
+    else:
+        return NOK + ATT_NOK + " [players are not in the same location]"
 
 def player_eat(player_name):
     # receives player , sees player position and tries to eat if location not empty
@@ -224,14 +266,9 @@ def player_eat(player_name):
     if (food > 0):
         if ("ENRGY: 10" not in player_line):
             food -= 1
-            replace_data(MAP, location_line,
-                            location_line.replace(line[FOOD], (" FOOD: " + str(food))))
-            line = player_line.split(";")
-            # obtains food quantity
-            energy = eval((line[ENRGY].split(":"))[VALUE_INDEX])
-            energy += 1
-
-            replace_data(PLAY, player_line, player_line.replace(line[ENRGY], (" ENRGY: " + str(energy))))
+            replace_data(MAP, location_line,location_line.replace(line[FOOD], (" FOOD: " + str(food))))
+ 
+            change_stats_player(player_name, "ENRGY", ENRGY,1)  # increase one energy
         
             return OK + player_name + EAT_OK
 
@@ -249,26 +286,20 @@ def player_practice(player_name, option):
         if (energy > 0):
             energy -= 1
             if (option == "1"):
-                replace_data(PLAY, player_line, player_line.replace(
-                    line[ENRGY], (" ENRGY: " + str(energy)))) # looses 1 energy point
-                player_line = find_data(PLAY, player_name) # gets new replaced line
-                line = player_line.split(";")
-                # obtains attack quantity and increases
-                attack = eval((line[ATTACK].split(":"))[VALUE_INDEX])
-                attack += 1
-                replace_data(PLAY, player_line, player_line.replace(
-                    line[ATTACK], (" ATT: " + str(attack))))
+                # removes one energy
+                change_stats_player(player_name, "ENRGY", ENRGY, -1)
+                
+                # increases attack
+                change_stats_player(player_name, "ATT", ATTACK, 1)
+                
                 return OK + player_name + PRACT_OK
             elif (option == "2"):
-                replace_data(PLAY, player_line, player_line.replace(
-                    line[ENRGY], (" ENRGY: " + str(energy))))  # looses 1 energy point
-                player_line = find_data(PLAY, player_name)
-                line = player_line.split(";")
-                # obtains defense quantity and increases
-                defense = eval((line[DEF].split(":"))[VALUE_INDEX])
-                defense += 1
-                replace_data(PLAY, player_line, player_line.replace(
-                    line[DEF], (" DEF: " + str(defense))))
+                # removes one energy
+                change_stats_player(player_name, "ENRGY", ENRGY, -1)
+
+                # increases defense
+                change_stats_player(player_name, "DEF", DEF, 1)
+                
                 return OK + player_name + PRACT_OK
             else:
                 return NOK + INV_MSG
@@ -285,16 +316,12 @@ def player_trap(player_name):
         line = player_line.split(";")
         energy = eval((line[ENRGY].split(":"))[VALUE_INDEX])
         if (energy > 0):
-            energy -= 1
-            replace_data(PLAY, player_line, player_line.replace(
-                line[ENRGY], (" ENRGY: " + str(energy))))  # looses 1 energy point
-            player_line = find_data(PLAY, player_name) # gets new replaced line
-            line = player_line.split(";")
-            # obtains experience quantity and increases
-            experience = eval((line[EXP].split(":"))[VALUE_INDEX])
-            experience += 1
-            replace_data(PLAY, player_line, player_line.replace(
-                line[EXP], (" EXP: " + str(experience))))
+            # removes one energy
+            change_stats_player(player_name, "ENRGY", ENRGY, -1)
+            
+            # increases experience
+            change_stats_player(player_name, "EXP", EXP, 1)
+
             return OK + player_name + TRAP_OK
         else:
             return OK + player_name + TRAP_OK + " [player is dead]" # player server should remove player

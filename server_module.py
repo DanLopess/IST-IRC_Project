@@ -18,9 +18,9 @@ IP = 0  # for identifying the ip address in address vector
 PORT = 1  # for identifying the port in address vector
 PLAY = "saves/players.save"
 MAP = "saves/map.save"
-TRP = 'TRAP'
-FOO = 'FOOD'
-CTR = 'CENTER'
+TRP = "TRAP"
+FOO = "FOOD"
+CTR = "CENTER"
 
 #location of certain strings in save files
 #ex: in map lines structure, when split, players names will be at index 1
