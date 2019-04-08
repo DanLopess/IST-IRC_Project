@@ -1,4 +1,5 @@
 import threading
+
 # **************************************************************************************
 #
 #                            IRC PROJECT - SERVER_MODULE (import)
@@ -11,7 +12,7 @@ import threading
 #   players structure: "PLAYER_NAME ; ATT: 25 ; DEF: 25; EXP: 25; ENRGY: 10; COORDINATES: (x,y); WON: 0; LOST: 0\n"
 # **************************************************************************************
 
-#constants definition
+# ******************* constants definition ********************
 NULL = ''
 COMMAND = 0
 IP = 0  # for identifying the ip address in address vector
@@ -22,15 +23,13 @@ TRP = "TRAP"
 FOO = "FOOD"
 CTR = "CENTER"
 
-#location of certain strings in save files
+#********* location of certain strings in save files **********
 #ex: in map lines structure, when split, players names will be at index 1
+
 # map.save :
 PLAYERS = 1
 FOOD = 2
-TRAP = 3
-CENTER = 4
 # players.save :
-PLAYER_NAME = 0
 ATTACK = 1
 DEF = 2
 EXP = 3
@@ -40,14 +39,15 @@ WON = 6
 LOST = 7
 # when splitting "FOOD: x" (example) , x is always at same index 1
 VALUE_INDEX = 1
+# note: if some indexes were not defined, that means they're not used, 
+# i.e., there's no need to access the string via index
 
-
-#socket communication parameters
+# ************** socket communication parameters ******************
 bind_ip = '127.0.0.1'
 bind_port = 12345
 MSG_SIZE = 1024
 
-#possible messages
+# ********************** possible messages ************************
 LOG = 'LOGIN'
 PLACE_FOOD = 'PLACEF'
 PLACE_TRAP = 'PLACET'
@@ -58,19 +58,15 @@ ATT = 'ATTACK'
 EAT = 'EAT'
 PRACT = 'PRACTICE'
 LOGOUT = 'LOGOUT'  
-KILL = 'KILL_SERVER'  # for testing purposes
 
-messages = [LOG, PLACE_FOOD, PLACE_TRAP,
-            PLACE_CENTER, SHOW_LOC, ATT, EAT, PRACT, TRP, ADD_PLAYER]
-
-#return codes
+# ************************** return codes **************************
 OK = 'OK: '
 NOK = 'NOK: '
 
-#return sub-codes
+#************************ return sub-codes *************************
 LOG_OK = ' login successful'
 PLACE_OK = ' placed successfully'
-LOCATION_OK = 'location has'  # specifies what location has
+LOCATION_OK = 'location has'  # specifies what is in a location
 ATT_OK = ' attacked successfully'  # specifies life and attributes of each player
 EAT_OK = ' ate successfully'
 PRACT_OK = ' practiced successfully'
@@ -78,7 +74,6 @@ TRAP_OK = ' fell into trap'
 ADD_OK = ' player added successfully' 
 
 LOG_NOK = ' failed to login'
-LOCATION_NOK = ' location empty'
 PLACE_NOK = ' could not be placed'
 ATT_NOK = ' attack failed'
 EAT_NOK = ' could not eat'
@@ -88,7 +83,7 @@ INV_MSG = ' invalid message type'
 INV_PLAYER = ' no such player'
 ADD_NOK = ' failed to add player'
 
-
+# **************************** classes ******************************
 class ReadWriteLock:
     """ A lock object that allows many simultaneous "read locks", but
     only one "write lock." """

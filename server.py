@@ -10,7 +10,7 @@ from server_module import *
 
 # **************************************************************************************
 #
-#                             IRC PROJECT - SERVER
+#                             IRC PROJECT - GAME-MASTER SERVER
 #                             AUTHOR - DANIEL LOPES
 #
 #           NOTE: ALL DEFINITIONS AND MESSAGES TYPES ARE IN SERVER_MODULE (import)
@@ -21,15 +21,11 @@ from server_module import *
 # ******************** generic functions ********************
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C. Leaving...') 
+    for i in threads: # waits for all threads to finish, avoids corruption of data
+        i.join()
     sys.exit(0) #if multiple threads, must receive command twice
-
-def end_connections(active_users):
-    # terminates all server-client sockets
-    for i in active_users:
-        i.close()
-        active_users.remove(i)
-
-def handle_client_connection(client_socket, address): # place in while
+  
+def handle_client_connection(client_socket, address):
     logged = 0 # variable to check if client has already logged in
     while True:
         msg_from_client = client_socket.recv(MSG_SIZE)
@@ -48,9 +44,6 @@ def handle_client_connection(client_socket, address): # place in while
                 msg_to_client = NOK + LOG_NOK
         elif (len(message) == 1 and message[COMMAND] == LOGOUT):  # LOGOUT
             break
-        elif (len(message) == 1 and message[COMMAND] == KILL):  # KILL_SERVER
-            end_connections(active_users)
-            exit(0)  # end thread
         else:
             msg_to_client = execute_command(message)
            
@@ -70,8 +63,11 @@ def generate_save():
                     fn.write(str((i,f))+" ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n")
 
 def find_data (filename, data):
-    #data can be either player_name or coordinates, filename is either map or players
-    #this function returns the correspondent lines of either a specific coordinate or player
+    """
+    This function searches for the correspondent line of either a specific coordinate or player (data) \n
+        inputs: filename, data - can be either player_name or coordinates, filename - is either map or players\n
+        returns: string
+    """
     rw.acquire_read() # many threads can read, if none is writting
     try:
         with open(filename, "r") as f:
@@ -79,14 +75,19 @@ def find_data (filename, data):
                 found_data = line.find(str(data))
                 if (found_data != -1):
                     return line
-        return ""
+        return NULL
     finally:
         rw.release_read()
 
 def replace_data (filename, oldline, newline):
+    """
+    This function replaces an old line of a specific file with a new one \n
+        inputs: filename, oldline - contais the line to be replaced, newline - replacing line\n
+        returns: none
+    """
     rw.acquire_write()  # only one thread a time can write to file
     try:
-        if (oldline != ""):
+        if (oldline != NULL):
             with fileinput.FileInput(filename, inplace=True, backup='.bak') as file:   
                 for line in file:
                     print(line.replace(oldline, newline), end='')
@@ -102,7 +103,11 @@ def replace_data (filename, oldline, newline):
         rw.release_write()
 
 def execute_command(message):
-    #function that executes all actions based on command input
+    """
+    Function that executes all actions based on command input\n
+        inputs: message - command given\n
+        returns: none
+    """
     if (message[COMMAND] in messages):  # if invalid command, no need to continue
         if (message[COMMAND] == PLACE_FOOD and len(message) == 1):
             msg_to_client = place_item(FOO)  # type 1 is food
@@ -117,34 +122,34 @@ def execute_command(message):
         # receives command and player name
         elif (message[COMMAND] == SHOW_LOC and len(message) == 2):
             # message[PLAYER_NAME] : player_name
-            if (find_data(PLAY, message[PLAYERS]) != ""):  # if player exists
+            if (find_data(PLAY, message[PLAYERS]) != NULL):  # if player exists
                 msg_to_client = show_location(message[PLAYERS])
             else:
                 msg_to_client = NOK + INV_PLAYER
 
         elif (message[COMMAND] == ATT and len(message) == 3):
             # message[PLAYERS] : attacker_name / message[PLAYERS+1] : attacked_name
-            if (find_data(PLAY, message[PLAYERS]) != ""):
+            if (find_data(PLAY, message[PLAYERS]) != NULL):
                 msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
             else:
                 msg_to_client = NOK + INV_PLAYER
 
         elif (message[COMMAND] == EAT and len(message) == 2):  # receives command and player name
-            if (find_data(PLAY, message[PLAYERS]) != ""):
+            if (find_data(PLAY, message[PLAYERS]) != NULL):
                 msg_to_client = player_eat(message[PLAYERS])
             else:
                 msg_to_client = NOK + INV_PLAYER
 
         # receives command and player name
         elif (message[COMMAND] == PRACT and len(message) == 3):
-            if (find_data(PLAY, message[PLAYERS]) != ""):
+            if (find_data(PLAY, message[PLAYERS]) != NULL):
                 msg_to_client = player_practice(message[PLAYERS], message[PLAYERS+1])
             else:
                 msg_to_client = NOK + INV_PLAYER
 
         # receives command and player name
         elif (message[COMMAND] == TRP and len(message) == 2):
-            if (find_data(PLAY, message[PLAYERS]) != ""):
+            if (find_data(PLAY, message[PLAYERS]) != NULL):
                 msg_to_client = player_trap(message[PLAYERS])
             else:
                 msg_to_client = NOK + INV_PLAYER
@@ -160,7 +165,12 @@ def execute_command(message):
     return msg_to_client
 
 def change_stats_player(player_name, attribute, pos, value):
-    # this function allows to change a stat value of the player
+    """
+        Function that changes a certain player's stats to a received value.\n
+            inputs: Player_name , attribute - name of the stat to be changed, pos - position
+            of that stat in a player's line, value - new assigned value of the stat\n
+            return: null
+    """
     player_line = find_data(PLAY, player_name)
     line = player_line.split(";")
     stat = eval((line[pos].split(":"))[VALUE_INDEX])
@@ -206,7 +216,7 @@ def place_item(item_type):
         return NOK + CTR + PLACE_NOK + " [location already has training center]"
     else:
         # will not enter here
-        return ""
+        return NULL
 
 def show_location(player_name): #receives player name, finds player name, returns everything on player location.
     return ("\n" + OK + LOCATION_OK + "\n" + "\n".join([x for x in find_data(MAP, player_name).split(";")][1:]))
@@ -231,22 +241,31 @@ def attack_player(attacker, attacked):  # receives attacking player and attacked
             "experience" : eval((line2[EXP].split(":"))[VALUE_INDEX])
         }
 
+        if (attacked_stats["energy"] == 0 or attacker_stats["energy"] == 0):
+            return NOK + ATT_NOK + " [not enough energy to fight]"
+
         #both attacker and attacked lose one energy
         change_stats_player(attacker, "ENRGY", ENRGY, -1)
         change_stats_player(attacked, "ENRGY", ENRGY, -1)
+
 
         if ((attacker_stats["attack"] + attacker_stats["energy"] + attacker_stats["experience"]) /
         ((attacked_stats["defense"] + attacked_stats["energy"] + attacked_stats["experience"]) * random.uniform(0.5, 1.5)) > 1):
             # attacker gained experience and attacked lost one energy
             change_stats_player(attacker, "EXP", EXP, 1)
             change_stats_player(attacked, "ENRGY", ENRGY, -1)
+            # attacker won and attacked lost
+            change_stats_player(attacker, "WON", WON, 1)
+            change_stats_player(attacked, "LOST", LOST, 1)
             return OK + ATT_OK + " [" + attacker + " won the combat and received one experience point]"
         else:
             # attacked gained experience and attacker lost one energy (opposite)
             change_stats_player(attacked, "EXP", EXP, 1)
             change_stats_player(attacker, "ENRGY", ENRGY, -1)
+            # attacker lost and attacked won
+            change_stats_player(attacked, "WON", WON, 1)
+            change_stats_player(attacker, "LOST", LOST, 1)
             return NOK + ATT_NOK + " [" + attacked + " won the combat instead and received one experience point]"
-
     else:
         return NOK + ATT_NOK + " [players are not in the same location]"
 
@@ -329,13 +348,13 @@ def player_trap(player_name):
         return NOK + player_name + TRAP_NOK + " [location has no trap]"
 
 def add_player(player_name, att, defense):
-    if (player_name != "" and (eval(att) +  eval(defense)) <= 50):
+    if (player_name != NULL and (eval(att) +  eval(defense)) <= 50):
         x = random.randint(0, 4)
         y = random.randint(0, 4)
         coordinate = "(" + str(x)+", "+str(y)+")"
         
 
-        replace_data(PLAY, "", player_name + " ; ATT: " + att + " ; DEF: " +
+        replace_data(PLAY, NULL, player_name + " ; ATT: " + att + " ; DEF: " +
                      defense + "; EXP: 1; ENRGY: 10; COORDINATES: " + 
                      coordinate + "; WON: 0; LOST: 0\n") # adds new player line to players.save
         
@@ -363,7 +382,7 @@ active_users = []
 threads = []
 signal.signal(signal.SIGINT, signal_handler) # receive and handle sigint (ctrl+c)
 rw = ReadWriteLock()  # lock for one writer and many readers of a file
-generate_save() # creates required files
+generate_save() # creates required files if no save file existant
 
 while True:
     client_sock, address = server.accept()

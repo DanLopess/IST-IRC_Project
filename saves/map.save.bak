@@ -16,7 +16,7 @@
 (3, 0) ; PLAYERS: NULL; FOOD: 1; TRAP: True; CENTER: False;
 (3, 1) ; PLAYERS: MIGUEL; FOOD: 0; TRAP: True; CENTER: True;
 (3, 2) ; PLAYERS: NULL; FOOD: 3; TRAP: False; CENTER: False;
-(3, 3) ; PLAYERS: DANIEL; FOOD: 12; TRAP: True; CENTER: True;
+(3, 3) ; PLAYERS: DIOGO, DANIEL; FOOD: 12; TRAP: True; CENTER: True;
 (3, 4) ; PLAYERS: NULL; FOOD: 2; TRAP: False; CENTER: False;
 (4, 0) ; PLAYERS: NULL; FOOD: 1; TRAP: True; CENTER: False;
 (4, 1) ; PLAYERS: NULL; FOOD: 5; TRAP: False; CENTER: True;

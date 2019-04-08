@@ -5,7 +5,7 @@ import select
 
 # **************************************************************************************
 #
-#                             IRC PROJECT - CLIENT
+#                             IRC PROJECT - GAME-MASTER CLIENT
 #                             AUTHOR - DANIEL LOPES
 #
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
@@ -14,7 +14,6 @@ import select
 #constants definition
 IN = "LOGIN\n"
 OUT = "LOGOUT\n"
-KILL = "KILL_SERVER\n"
 
 TCP_IP = 'localhost'
 TCP_PORT = 12345
@@ -47,7 +46,7 @@ while True:
 				client_sock.send(client_msg)
 
 				# end of connection
-				if(user_msg == OUT or user_msg == KILL):
+				if(user_msg == OUT):
 					exit()
 
 		# i == sock - server sent a message to the socket
