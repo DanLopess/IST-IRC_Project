@@ -10,16 +10,13 @@ from server_module import *
 
 # **************************************************************************************
 #
-#                             IRC PROJECT - GAME-MASTER SERVER
+#                         IRC PROJECT - GAME-MASTER SERVER
 #                             AUTHOR - DANIEL LOPES
 #
 #           NOTE: ALL DEFINITIONS AND MESSAGES TYPES ARE IN SERVER_MODULE (import)
 #
-# Project source files: server.py, client.py, server_modules.py, map.save, players.save
+# Project source files: server.py, client.py, server_modules.py
 # **************************************************************************************
-
-messages = [LOG, PLACE_FOOD, PLACE_TRAP,
-PLACE_CENTER, SHOW_LOC, ATT, EAT, PRACT, TRP, ADD_PLAYER]
 
 # ******************** generic functions ********************
 def signal_handler(sig, frame):
@@ -109,59 +106,56 @@ def execute_command(message):
     """
     Function that executes all actions based on command input\n
         inputs: message - command given\n
-        returns: none
+        returns: message to client
     """
-    if (message[COMMAND] in messages):  # if invalid command, no need to continue
-        if (message[COMMAND] == PLACE_FOOD and len(message) == 1):
-            msg_to_client = place_item(FOO)  # type 1 is food
+    if (message[COMMAND] == PLACE_FOOD and len(message) == 1):
+        msg_to_client = place_item(FOO)  # type 1 is food
 
-        elif (message[COMMAND] == PLACE_TRAP and len(message) == 1):
-            msg_to_client = place_item(TRP)  # type 1 is trap
+    elif (message[COMMAND] == PLACE_TRAP and len(message) == 1):
+        msg_to_client = place_item(TRP)  # type 1 is trap
 
-        elif (message[COMMAND] == PLACE_CENTER and len(message) == 1):
-            # type 1 is training center
-            msg_to_client = place_item(CTR)
+    elif (message[COMMAND] == PLACE_CENTER and len(message) == 1):
+        # type 1 is training center
+        msg_to_client = place_item(CTR)
 
-        # receives command and player name
-        elif (message[COMMAND] == SHOW_LOC and len(message) == 2):
-            # message[PLAYER_NAME] : player_name
-            if (find_data(PLAY, message[PLAYERS]) != NULL):  # if player exists
-                msg_to_client = show_location(message[PLAYERS])
-            else:
-                msg_to_client = NOK + INV_PLAYER
-
-        elif (message[COMMAND] == ATT and len(message) == 3):
-            # message[PLAYERS] : attacker_name / message[PLAYERS+1] : attacked_name
-            if (find_data(PLAY, message[PLAYERS]) != NULL):
-                msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
-            else:
-                msg_to_client = NOK + INV_PLAYER
-
-        elif (message[COMMAND] == EAT and len(message) == 2):  # receives command and player name
-            if (find_data(PLAY, message[PLAYERS]) != NULL):
-                msg_to_client = player_eat(message[PLAYERS])
-            else:
-                msg_to_client = NOK + INV_PLAYER
-
-        # receives command and player name
-        elif (message[COMMAND] == PRACT and len(message) == 3):
-            if (find_data(PLAY, message[PLAYERS]) != NULL):
-                msg_to_client = player_practice(message[PLAYERS], message[PLAYERS+1])
-            else:
-                msg_to_client = NOK + INV_PLAYER
-
-        # receives command and player name
-        elif (message[COMMAND] == TRP and len(message) == 2):
-            if (find_data(PLAY, message[PLAYERS]) != NULL):
-                msg_to_client = player_trap(message[PLAYERS])
-            else:
-                msg_to_client = NOK + INV_PLAYER
-           
-        elif (message[COMMAND] == ADD_PLAYER and len(message) == 4):
-            msg_to_client = add_player(message[PLAYERS], message[PLAYERS+1], message[PLAYERS+2])
-        
+    # receives command and player name
+    elif (message[COMMAND] == SHOW_LOC and len(message) == 2):
+        # message[PLAYER_NAME] : player_name
+        if (find_data(PLAY, message[PLAYERS]) != NULL):  # if player exists
+            msg_to_client = show_location(message[PLAYERS])
         else:
-            msg_to_client = NOK + INV_MSG
+            msg_to_client = NOK + INV_PLAYER
+
+    elif (message[COMMAND] == ATT and len(message) == 3):
+        # message[PLAYERS] : attacker_name / message[PLAYERS+1] : attacked_name
+        if (find_data(PLAY, message[PLAYERS]) != NULL):
+            msg_to_client = attack_player(message[PLAYERS], message[PLAYERS+1])
+        else:
+            msg_to_client = NOK + INV_PLAYER
+
+    elif (message[COMMAND] == EAT and len(message) == 2):  # receives command and player name
+        if (find_data(PLAY, message[PLAYERS]) != NULL):
+            msg_to_client = player_eat(message[PLAYERS])
+        else:
+            msg_to_client = NOK + INV_PLAYER
+
+    # receives command and player name
+    elif (message[COMMAND] == PRACT and len(message) == 3):
+        if (find_data(PLAY, message[PLAYERS]) != NULL):
+            msg_to_client = player_practice(message[PLAYERS], message[PLAYERS+1])
+        else:
+            msg_to_client = NOK + INV_PLAYER
+
+    # receives command and player name
+    elif (message[COMMAND] == TRP and len(message) == 2):
+        if (find_data(PLAY, message[PLAYERS]) != NULL):
+            msg_to_client = player_trap(message[PLAYERS])
+        else:
+            msg_to_client = NOK + INV_PLAYER
+        
+    elif (message[COMMAND] == ADD_PLAYER and len(message) == 4):
+        msg_to_client = add_player(message[PLAYERS], message[PLAYERS+1], message[PLAYERS+2])
+    
     else:
         msg_to_client = NOK + INV_MSG
 
@@ -186,6 +180,11 @@ def change_stats_player(player_name, attribute, pos, value):
 #************** commands handling functions **********************
 
 def place_item(item_type):
+    """
+    Function that places a given item in a random map position\n
+        inputs: item_type - FOOD, TRAP our CENTER\n
+        returns: message to client
+    """
     # generate random coordinates
     x = random.randint(0, 4)
     y = random.randint(0, 4)
@@ -222,9 +221,19 @@ def place_item(item_type):
         return NULL
 
 def show_location(player_name): #receives player name, finds player name, returns everything on player location.
+    """
+    Function that shows everything there is, in a player's location\n
+        inputs: player_name\n
+        returns: message to client containing all location info
+    """
     return ("\n" + OK + LOCATION_OK + "\n" + "\n".join([x for x in find_data(MAP, player_name).split(";")][1:]))
 
-def attack_player(attacker, attacked):  # receives attacking player and attacked player
+def attack_player(attacker, attacked):
+    """
+    Function that decides the result of an attack command\n
+        inputs: attacker - player1 name, attacked - player2 name\n
+        returns: message to client containing the battle results
+    """
     location_line = find_data(MAP, attacker) # gets location line, in which attacker and attacked are
     if (attacked in location_line):
         attacker_line = find_data(PLAY, attacker)
@@ -268,11 +277,16 @@ def attack_player(attacker, attacked):  # receives attacking player and attacked
             # attacker lost and attacked won
             change_stats_player(attacked, "WON", WON, 1)
             change_stats_player(attacker, "LOST", LOST, 1)
-            return NOK + ATT_NOK + " [" + attacked + " won the combat instead and received one experience point]"
+            return NOK + ATT_NOK + " [" + attacked + " won the combat and received one experience point]"
     else:
         return NOK + ATT_NOK + " [players are not in the same location]"
 
 def player_eat(player_name):
+    """
+    Function that tries to add energy to a player (eat) if location not empty (has food)\n
+        inputs: player_name\n
+        returns: message to client containing the output of this action
+    """
     # receives player , sees player position and tries to eat if location not empty
     player_line = find_data(PLAY, player_name)
     
@@ -299,6 +313,11 @@ def player_eat(player_name):
     return NOK + player_name + EAT_NOK + " [location has no food available]"
 
 def player_practice(player_name, option):
+    """
+    Function that  tries to add experience to a player (practice) if location not empty (has training center)\n
+        inputs: player_name, option - either practice attack or defense\n
+        returns: message to client containing the output of this action
+    """
     # receives player tries to train (option: 1 - attack, 2 - defense) if location has center
     location_line = find_data(MAP, player_name)
     if (location_line.find("CENTER: True;") != -1):
@@ -331,6 +350,11 @@ def player_practice(player_name, option):
         return NOK + player_name + PRACT_NOK + " [location has no training center]"
 
 def player_trap(player_name):
+    """
+    Function that tries subtract energy to a player (trap) if location not empty (has trap)\n
+        inputs: player_name\n
+        returns: message to client containing the output of this action
+    """
     # receives player , sees player position and tries to trap him if location not empty
     location_line = find_data(MAP, player_name)
     if (location_line.find("TRAP: True;") != -1):
@@ -351,6 +375,11 @@ def player_trap(player_name):
         return NOK + player_name + TRAP_NOK + " [location has no trap]"
 
 def add_player(player_name, att, defense):
+    """
+    Function that adds a player, if attack and defense values within accepted values\n
+        inputs: player_name, att, defense \n
+        returns: message to client containing the output of this action
+    """
     if (player_name != NULL and (eval(att) +  eval(defense)) <= 50):
         x = random.randint(0, 4)
         y = random.randint(0, 4)

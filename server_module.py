@@ -8,8 +8,10 @@ import threading
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
 #
 #                                        NOTE:
-#   map structure: "(0,0) ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n"
-#   players structure: "PLAYER_NAME ; ATT: 25 ; DEF: 25; EXP: 25; ENRGY: 10; COORDINATES: (x,y); WON: 0; LOST: 0\n"
+#   map structure: 
+#   "(0,0) ; PLAYERS: NULL; FOOD: 0; TRAP: False; CENTER: False;\n"
+#   players structure: 
+#   "PLAYER_NAME ; ATT: 25 ; DEF: 25; EXP: 25; ENRGY: 10; COORDINATES: (x,y); WON: 0; LOST: 0\n"
 # **************************************************************************************
 
 # ******************* constants definition ********************
@@ -52,7 +54,7 @@ LOG = 'LOGIN'
 PLACE_FOOD = 'PLACEF'
 PLACE_TRAP = 'PLACET'
 PLACE_CENTER = 'PLACEC'
-ADD_PLAYER = 'ADDP'  # add new player to map
+ADD_PLAYER = 'ADDP'
 SHOW_LOC = 'SHOW_LOCATION'
 ATT = 'ATTACK'
 EAT = 'EAT'
@@ -66,8 +68,8 @@ NOK = 'NOK: '
 #************************ return sub-codes *************************
 LOG_OK = ' login successful'
 PLACE_OK = ' placed successfully'
-LOCATION_OK = 'location has'  # specifies what is in a location
-ATT_OK = ' attacked successfully'  # specifies life and attributes of each player
+LOCATION_OK = 'location has' 
+ATT_OK = ' attacked successfully'
 EAT_OK = ' ate successfully'
 PRACT_OK = ' practiced successfully'
 TRAP_OK = ' fell into trap'
