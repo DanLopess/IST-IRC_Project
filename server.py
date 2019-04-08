@@ -18,6 +18,9 @@ from server_module import *
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
 # **************************************************************************************
 
+messages = [LOG, PLACE_FOOD, PLACE_TRAP,
+PLACE_CENTER, SHOW_LOC, ATT, EAT, PRACT, TRP, ADD_PLAYER]
+
 # ******************** generic functions ********************
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C. Leaving...') 
