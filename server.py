@@ -11,7 +11,7 @@ from server_module import *
 # **************************************************************************************
 #
 #                         IRC PROJECT - GAME-MASTER SERVER
-#                             AUTHOR - DANIEL LOPES
+#                             AUTHOR - DANIEL LOPES 90590
 #
 #           NOTE: ALL DEFINITIONS AND MESSAGES TYPES ARE IN SERVER_MODULE (import)
 #
@@ -21,6 +21,7 @@ from server_module import *
 # ******************** generic functions ********************
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C. Leaving...') 
+    server.close() # close socket
     for i in threads: # waits for all threads to finish, avoids corruption of data
         i.join()
     sys.exit(0) #if multiple threads, must receive command twice
@@ -98,6 +99,7 @@ def replace_data (filename, oldline, newline):
                     f.write(newline)  # adds new data
             else:
                 with open(filename, "a+") as f:
+                    #f.write('\n')
                     f.write(newline)  # adds new data
     finally:
         rw.release_write()
@@ -178,7 +180,6 @@ def change_stats_player(player_name, attribute, pos, value):
         line[pos], (" " + attribute + ": " + str(stat))))
 
 #************** commands handling functions **********************
-
 def place_item(item_type):
     """
     Function that places a given item in a random map position\n
@@ -388,7 +389,7 @@ def add_player(player_name, att, defense):
 
         replace_data(PLAY, NULL, player_name + " ; ATT: " + att + " ; DEF: " +
                      defense + "; EXP: 1; ENRGY: 10; COORDINATES: " + 
-                     coordinate + "; WON: 0; LOST: 0\n") # adds new player line to players.save
+                     coordinate + "; WON: 0; LOST: 0;\n") # adds new player line to players.save
         
         location_line = find_data(MAP, coordinate)
         if ("PLAYERS: NULL;" in location_line):

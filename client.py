@@ -6,7 +6,7 @@ import select
 # **************************************************************************************
 #
 #                             IRC PROJECT - GAME-MASTER CLIENT
-#                             AUTHOR - DANIEL LOPES
+#                             AUTHOR - DANIEL LOPES 90590
 #
 # Project source files: server.py, client.py, server_modules.py, map.save, players.save
 # **************************************************************************************
